@@ -2,9 +2,6 @@
 # EXAMPLES
 # ------------------
 
-
-setwd("G:/Mi unidad/Investigación/R/Regresion CTP")
-
 setwd("C:/Users/UJA/Mi unidad/Investigacion/RegresionCTP/RegresionCTPc/STATISTICA/Scripts")
 
 source("ctp.fit.R")
