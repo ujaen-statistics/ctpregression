@@ -1,6 +1,11 @@
-#Examples
+# ------------------
+# EXAMPLES
+# ------------------
+
 
 setwd("G:/Mi unidad/Investigación/R/Regresion CTP")
+
+setwd("C:/Users/UJA/Mi unidad/Investigacion/RegresionCTP/RegresionCTPc/STATISTICA/Scripts")
 
 source("ctp.fit.R")
 source("summary_ctp.R")
@@ -14,228 +19,213 @@ library(COUNT)
 library(DGLMExtPois)
 
 
-# 1. Alemania -------------------------------------------------------------
+# 1. Germany data
+# ------------------------------------------------------------
 
 Germany <- read.delim("Germany.txt")
-formula<-Scored~Place+Type+Result+Rival
-Germany$Place<-relevel(as.factor(Germany$Place),"home")
+formula <- Scored ~ Place + Type + Result + Rival
+Germany$Place <- relevel(as.factor(Germany$Place),"home")
 
-#CTP estimation
-system.time(ctp.ale2 <- ctp.fit(formula, data=Germany))
+#CTP regression -----------------------------------------
+system.time(ctp.ger2 <- ctp.fit(formula, data = Germany))
 
-summary.ctp(ctp.ale2)
+summary.ctp(ctp.ger2)
 #AIC: 3207
 
-#Diagnosis plots
+#Diagnostic plots
 par(mfrow = c(1,2))
-plot.ctp(ctp.ale2)
+plot.ctp(ctp.ger2)
 
 par(mfrow=c(1,1))
-expec_ctp2<-expected.ctp(ctp.ale2)
+expec_ctp2<-expected.ctp(ctp.ger2)
 
 #Goodness of fit measures
-MPB(ctp.ale2)
-MAD(ctp.ale2)
-MSPE(ctp.ale2)
-pearson(ctp.ale2)
+MPB(ctp.ger2) # -0.0214043
+MAD(ctp.ger2) # 1.108523
+MSPE(ctp.ger2) # 2.43015
+pearson(ctp.ger2) # 862.7484
 
 #number of under-dispersed cases
-sum(ctp.ale2$parameters[1]<(-ctp.ale2$fitted.values-1)/2)
+sum(ctp.ger2$parameters[1] < (- ctp.ger2$fitted.values - 1) / 2) # 421
 
 
-
-#Poisson regression
-pois.ale <- glm(formula, data = Germany, family = "poisson")
-summary(pois.ale)
+#Poisson regression ----------------------------------------
+pois.ger <- glm(formula, data = Germany, family = "poisson")
+summary(pois.ger)
 #AIC: 3286.4
 
 #Goodness of fit measures
-sum(pois.ale$weights*(pois.ale$y-pois.ale$fitted.values))/sum(pois.ale$weights)
+sum(pois.ger$weights * (pois.ger$y - pois.ger$fitted.values)) / sum(pois.ger$weights)
 # 0.002325247
-sum(pois.ale$weights*abs(pois.ale$y-pois.ale$fitted.values))/sum(pois.ale$weights)
+sum(pois.ger$weights * abs(pois.ger$y - pois.ger$fitted.values)) / sum(pois.ger$weights)
 # 1.281843
-sum(pois.ale$weights*abs(pois.ale$y-pois.ale$fitted.values)^2)/sum(pois.ale$weights)
-#[1] 3.156906
-sum(residuals(pois.ale)^2)
-#[1] 980.8372
+sum(pois.ger$weights * abs(pois.ger$y - pois.ger$fitted.values)^2) / sum(pois.ger$weights)
+# 3.156906
+sum(residuals(pois.ger)^2)
+# 980.8372
 
-library(COUNT)
-poisest<-poi.obs.pred(len=17, model=pois.ale)
+poisest <- poi.obs.pred(len = 17, model = pois.ger)
 #Dif
-9.93*sum(abs(poisest$propObsv-poisest$propPred))
-#[1] 177.1376
+9.93*sum(abs(poisest$propObsv - poisest$propPred))
+# 177.1376
 #Chi2
-9.93*sum((poisest$propObsv-poisest$propPred)^2/poisest$propPred)
-#[1] 4548.961
+9.93*sum((poisest$propObsv - poisest$propPred)^2 / poisest$propPred)
+# 4548.961
 
 
-
-#Binomial Negative regression
-library(MASS) #Si cargamos el paquete COUNT no hace falta
-nb.ale <- glm.nb(formula, data=Germany)
-summary(nb.ale)
+#Negative binomial regression -----------------------------------------
+library(MASS) #If we load the COUNT package, we do not need to
+nb.ger <- glm.nb(formula, data = Germany)
+summary(nb.ger)
 #AIC: 3286.9
 
-#Generalized Waring regression ¿Lo dejamos?
-gw.ale <- gw(formula, data = Germany)
-summary(gw.ale)
+#Generalized Waring regression ----------------------------------------
+gw.ger <- gw(formula, data = Germany)
+summary(gw.ger)
 #AIC: 3289
 
 
 
-#hP regression
-library(DGLMExtPois)
-hp.ale <- glm.hP(formula.mu = formula, formula.gamma = formula, data=Germany)
-summary(hp.ale)
+#hP regression ----------------------------------------------------------------
+hp.ger <- glm.hP(formula.mu = formula, formula.gamma = formula, data = Germany)
+summary(hp.ger)
 #AIC: 3265
 
-
-#hP regression with constant dispersion
-hp.ale1 <- glm.hP(formula.mu = formula, formula.gamma = ~1, data=Germany)
-summary(hp.ale1)
+#hP regression with constant dispersion ------------------------------------
+hp.ger1 <- glm.hP(formula.mu = formula, formula.gamma = ~ 1, data = Germany)
+summary(hp.ger1)
 #AIC: 3266
 
 #hP model comparison
-DGLMExtPois::lrtest(hp.ale,hp.ale1)
+DGLMExtPois::lrtest(hp.ger,hp.ger1)
 #p-value: 0.0376382
 
-
 #hP regression with dispersion parameter depending on the significant covariates
-system.time(hp.ale2 <- glm.hP(formula.mu = formula, formula.gamma = ~Type+Result, data=Germany))
+system.time(hp.ger2 <- glm.hP(formula.mu = formula, formula.gamma = ~ Type + Result, data = Germany))
 
-summary(hp.ale2)
+summary(hp.ger2)
 #AIC: 3260
 
 #hP model comparison
-DGLMExtPois::lrtest(hp.ale,hp.ale2)
+DGLMExtPois::lrtest(hp.ger, hp.ger2)
 #p-value: 0.6832639
 
-DGLMExtPois::lrtest(hp.ale2,hp.ale1)
+DGLMExtPois::lrtest(hp.ger2, hp.ger1)
 #p-value: 0.007856486
 
 #Goodness of fit measures
-hp.ale2$response<-hp.ale2$y
-MAD(hp.ale2)#[1] 1.10363
-MPB(hp.ale2)#[1] -0.005318106
-MSPE(hp.ale2)#[1] 2.422297
-sum(residuals(hp.ale2)^2)#[1] 1268.918
+hp.ger2$response <- hp.ger2$y
+MAD(hp.ger2) # 1.10363
+MPB(hp.ger2) # -0.005318106
+MSPE(hp.ger2) # 2.422297
+sum(residuals(hp.ger2)^2) # 1268.918
 
 #number of under-dispersed cases
-sum(hp.ale2$gammas < 1)#[1] 854
+sum(hp.ger2$gammas < 1) # 854
 
-#Diagnosis plots
+#Diagnostic plots
 par(mfrow = c(1,2))
-plot(hp.ale2)
+plot(hp.ger2)
 
-par(mfrow=c(1,1))
-expec_hp2<-hP_expected(hp.ale2)
-barplot(expec_hp2$observed_freq,xlab = "Y", ylab = "Frequencies")
-lines(expec_hp2$frequencies, x=c(1:18), col = "blue")
-legend("topright", legend=c(paste("Dif = ", round(expec_hp2$dif, 3)), paste(expression(chi ^ 2), "=", round(37.75822, 3))))
+par(mfrow = c(1,1))
+expec_hp2 <- hP_expected(hp.ger2)
+barplot(expec_hp2$observed_freq, xlab = "Y", ylab = "Frequencies")
+lines(expec_hp2$frequencies, x = c(1:18), col = "blue")
+legend("topright", legend = c(paste("Dif = ", round(expec_hp2$dif, 3)), paste(expression(chi ^ 2), "=", round(37.75822, 3))))
 #Dif
-sum(abs(expec_hp2$frequencies-expec_hp2$observed_freq))
-#[1] 126.124
+sum(abs(expec_hp2$frequencies - expec_hp2$observed_freq))
+# 126.124
 
 
 #Figure 1 in paper
-freq_agr<-matrix(c(expec_ctp2$observed_freq,expec_ctp2$frequencies,expec_hp2$frequencies),byrow=T,nrow=3)
-colnames(freq_agr)<-0:17
-rownames(freq_agr)<-c("Observed","CTP expected","hP expected")
+freq_agr <- matrix(c(expec_ctp2$observed_freq, expec_ctp2$frequencies, expec_hp2$frequencies), byrow=T, nrow=3)
+colnames(freq_agr) <- 0:17
+rownames(freq_agr) <- c("Observed","CTP expected","hP expected")
 color.names <- c("black","grey50","white")
 barplot(freq_agr,beside = T, xlab = "Y", ylab = "Frequencies", col = color.names)
-legend("topright",rownames(freq_agr), cex=0.9, fill = color.names, bty = "n")
+legend("topright",rownames(freq_agr), cex = 0.9, fill = color.names, bty = "n")
 
 
 
-#CMP regression
-cmp.ale <- glm.CMP(formula.mu = formula, formula.nu = formula, data=Germany)
-summary(cmp.ale)
+#CMP regression --------------------------------------------------------------
+cmp.ger <- glm.CMP(formula.mu = formula, formula.nu = formula, data = Germany)
+summary(cmp.ger)
 #AIC: 12510
 
 
-#CMP regression with constant dispersion
-cmp.ale1 <- glm.CMP(formula.mu = formula, formula.nu = ~1, data=Germany)
-summary(cmp.ale1)
+#CMP regression with constant dispersion ----------------------------------
+cmp.ger1 <- glm.CMP(formula.mu = formula, formula.nu = ~ 1, data = Germany)
+summary(cmp.ger1)
 #AIC: 3285
 
 
-#CMP regression with dispersion parameter depending on the significant covariates
-cmp.ale2 <- glm.CMP(formula.mu = formula, formula.nu = ~Type+Result, data=Germany)
-summary(cmp.ale2)
+#CMP regression with dispersion parameter depending on the significant covariates -----
+cmp.ger2 <- glm.CMP(formula.mu = formula, formula.nu = ~ Type + Result, data = Germany)
+summary(cmp.ger2)
 #AIC: 3283
 
 #cMP model comparison
-DGLMExtPois::lrtest(cmp.ale2,cmp.ale1)
+DGLMExtPois::lrtest(cmp.ger2, cmp.ger1)
 #p-value: 0.03799814 
 
-sum(cmp.ale2$nu > 1)#[1] 717
-
-#¿Lo dejamos?
-cmp.ale3 <- glm.CMP(formula.mu = formula, formula.nu = ~Oficial, data=Germany)
-summary(cmp.ale3)
-
-DGLMExtPois::lrtest(cmp.ale3,cmp.ale2)
-#p-value: 0.2788689
-
-DGLMExtPois::lrtest(cmp.ale3,cmp.ale1)
-#p-value: 0.01539249
-sum(cmp.ale3$nu > 1)#[1] 578
+sum(cmp.ger2$nu > 1) # 717
 
 
 
-# 2. Data mdvis (COUNT) -------------------------------------------------------------
+# 2. mdvis data (COUNT) 
+# -------------------------------------------------------------
+
 data(mdvis)
 
-#Poisson regression
-md_p <- glm(numvisit ~ reform + factor(educ) + factor(agegrp), family=poisson, data=mdvis)
+#Poisson regression --------------------------------------------------------------------------
+md_p <- glm(numvisit ~ reform + factor(educ) + factor(agegrp), family = poisson, data = mdvis)
 summary(md_p)
-#AIC=13114
+#AIC: 13114
 
 
 
-#Binomial Negative regression
-md_nb <- glm.nb(numvisit ~ reform + factor(educ) + factor(agegrp), data=mdvis)
+#Negative binomial regression --------------------------------------------------
+md_nb <- glm.nb(numvisit ~ reform + factor(educ) + factor(agegrp), data = mdvis)
 summary(md_nb)
-#AIC=9393.1
+#AIC: 9393.1
 
 #Goodness of fit measures
-sum(md_nb$weights*(md_nb$y-md_nb$fitted.values))/sum(md_nb$weights)
-#[1] 0.001848847
+sum(md_nb$weights*(md_nb$y - md_nb$fitted.values)) / sum(md_nb$weights)
+# 0.001848847
 sum(md_nb$weights*abs(md_nb$y-md_nb$fitted.values))/sum(md_nb$weights)
-#[1] 2.389566
+# 2.389566
 sum(md_nb$weights*abs(md_nb$y-md_nb$fitted.values)^2)/sum(md_nb$weights)
-#[1] 16.22662
+# 16.22662
 sum(residuals(md_nb)^2)
-#[1] 2389.509
+# 2389.509
 
-library(COUNT)
 nbest<-nb2.obs.pred(len=60, model=md_nb)
 #Dif
-22.27*sum(abs(nbest$propObsv-nbest$propPred))
-#[1] 430.0494
+22.27 * sum(abs(nbest$propObsv-nbest$propPred))
+# 430.0494
 #Chi2
-22.27*sum((nbest$propObsv-nbest$propPred)^2/nbest$propPred)
-#[1] 7861.859
+22.27 * sum((nbest$propObsv-nbest$propPred)^2/nbest$propPred)
+# 7861.859
 
 
 
-#Generalized Waring regression
-system.time(md_gw <- gw(numvisit ~ reform + factor(educ) + factor(agegrp), data=mdvis))
+#Generalized Waring regression ----------------------------------------------------------
+system.time(md_gw <- gw(numvisit ~ reform + factor(educ) + factor(agegrp), data = mdvis))
 
 summary(md_gw)
-#AIC=9338
+#AIC: 9338
 
 #Goodness of fit measures
-sum(md_gw$W*(md_gw$Y-md_gw$fitted.values))/sum(md_gw$W)
-#[1] 0.02219918
+sum(md_gw$W * (md_gw$Y - md_gw$fitted.values)) / sum(md_gw$W)
+# 0.02219918
 sum(md_gw$W*abs(md_gw$Y-md_gw$fitted.values))/sum(md_gw$W)
-#[1] 2.35340
+# 2.35340
 sum(md_gw$W*abs(md_gw$Y-md_gw$fitted.values)^2)/sum(md_gw$W)
-#[1] 15.91485
+# 15.91485
 sum(residuals(md_gw)^2)
-#[1] 2341.92
+# 2341.92
 
-#Diagnosis plots
+#Diagnostic plots
 source("plot.glm_gw.R")
 source("residuals_gw.R")
 source("dgw.R")
@@ -244,55 +234,54 @@ plot.gw(md_gw)
 
 source("expected_gw.R")
 par(mfrow = c(1,1))
-expec_gw<-expected.gw(md_gw)
-sum(abs(expec_gw$frequencies-expec_gw$observed_freq))
-#[1] 352.5629
+expec_gw <- expected.gw(md_gw)
+sum(abs(expec_gw$frequencies - expec_gw$observed_freq))
+# 352.5629
 
 
 
-#CTP regression
+#CTP regression -----------------------------------------------------
 #Initial values
-ctp<-fitctp(mdvis$numvisit, astart = 1, bstart = 1, gammastart = 3)
+ctp <- fitctp(mdvis$numvisit, astart = 1, bstart = 1, gammastart = 3)
 ctp$coefficients
 
-system.time(md_ctp <- ctp.fit(numvisit ~ reform + factor(educ) + factor(agegrp), data=mdvis, astart = 2.5, bstart = 0.5))
+system.time(md_ctp <- ctp.fit(numvisit ~ reform + factor(educ) + factor(agegrp), data = mdvis, astart = 2.5, bstart = 0.5))
 
 summary.ctp(md_ctp)
 #AIC: 9329
 
-
-#Diagnosis plots
+#Diagnostic plots
 par(mfrow = c(1,2))
 plot.ctp(md_ctp)
 
-par(mfrow=c(1,1))
-expec_ctp<-expected.ctp(md_ctp)
+par(mfrow = c(1,1))
+expec_ctp <- expected.ctp(md_ctp)
 
 #Goodness of fit measures
-MPB(md_ctp) #[1] 0.005063565
-MAD(md_ctp) #[1] 2.357706
-MSPE(md_ctp) #[1] 15.87876
-pearson(md_ctp) #[1] 2052.401
+MPB(md_ctp) # 0.005063565
+MAD(md_ctp) # 2.357706
+MSPE(md_ctp) # 15.87876
+pearson(md_ctp) # 2052.401
 
 
 #Figure 4 in paper
-freq_agr<-matrix(c(expec_ctp$observed_freq[1:22],expec_ctp$frequencies[1:22],expec_gw$frequencies[1:22]),byrow=T,nrow=3)
-colnames(freq_agr)<-0:21
-rownames(freq_agr)<-c("Observed","CTP expected","GW expected")
+freq_agr <- matrix(c(expec_ctp$observed_freq[1:22], expec_ctp$frequencies[1:22], expec_gw$frequencies[1:22]), byrow = T, nrow = 3)
+colnames(freq_agr) <- 0:21
+rownames(freq_agr) <- c("Observed", "CTP expected", "GW expected")
 color.names <- c("black","grey50","white")
 barplot(freq_agr,beside = T, xlab = "Y", ylab = "Frequencies", col = color.names)
-legend("topright",rownames(freq_agr), cex=0.9, fill = color.names, bty = "n")
+legend("topright",rownames(freq_agr), cex = 0.9, fill = color.names, bty = "n")
 
 
 
-#hP regression
-md_hp <- glm.hP(numvisit ~ reform + factor(educ) + factor(agegrp), formula.gamma=~1, data=mdvis)
+#hP regression --------------------------------------------------------------------------------------
+md_hp <- glm.hP(numvisit ~ reform + factor(educ) + factor(agegrp), formula.gamma = ~ 1, data = mdvis)
 summary(md_hp)
 #AIC: 14
 
 
 
-#CMP regression
-md_cmp <- glm.CMP(numvisit ~ reform + factor(educ) + factor(agegrp), formula.nu=~1, data=mdvis)
+#CMP regression ------------------------------------------------------------------------------------
+md_cmp <- glm.CMP(numvisit ~ reform + factor(educ) + factor(agegrp), formula.nu = ~ 1, data = mdvis)
 summary(md_cmp)
 #AIC: 9415

@@ -15,7 +15,7 @@ NULL
 #' @rdname plots
 #' @examples
 #' ## Fit the CTP model
-#' fit <- ctp.fit(formula = Favor~Lugar+Oficial+Resultado+CM, data = Alemania1)
+#' fit <- ctp.fit(formula = Scored~Place+Type+Result+Rival, data = Germany)
 #' oldpar <- par(mfrow = c(1, 2))
 #'
 #' ## Plot diagnostics
