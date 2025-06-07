@@ -1,14 +1,65 @@
 #' Extract and Visualize GW Regression Model Residuals
 #'
+library(doParallel)
+library(GWRM)
+
+source("pgw.R")
+source("dgw.R")
 
 residuals.gw <- function (object, type = c("pearson", "response", "quantile"), rep = 19, envelope = FALSE, 
           title = "Simulated Envelope of Residuals", trace = FALSE, 
           parallel = TRUE, ncores = 2, ...) {
   
   type <- match.arg(type)
-  source("pgw.R")
   
   resid.gw <- function(object, type) {
+    
+    #defino función necesaria
+    pgw <- function (q, a, k, ro, lower.tail = TRUE) 
+    {
+      if (!(is.double(q) || is.integer(q)) || !(is.double(a) || 
+                                                is.integer(a)) || !(is.double(k) || is.integer(k))|| 
+          !(is.double(ro) || is.integer(ro))) 
+        stop("Non-numeric argument to mathematical function")
+      maximum <- max(length(q), length(a), length(k), length(ro))
+      q <- rep(q, length.out = maximum)
+      a <- rep(a, length.out = maximum)
+      k <- rep(k, length.out = maximum)
+      ro <- rep(ro, length.out = maximum)
+      prob <- numeric(length = maximum)
+      for (ind in seq_along(q)) {
+        if (q[ind] < 0) {
+          prob[ind] <- 0
+          next
+        }
+        qlower <- trunc(q[ind])
+        x <- 0:qlower
+        probs <- dgw(x, a[ind], k[ind], ro[ind])
+        if (lower.tail) {
+          prob[ind] <- sum(probs)
+        }
+        else {
+          prob[ind] <- 1 - sum(probs)
+        }
+      }
+      return(prob)
+    }
+    
+    #defino función necesaria
+    dgw <- function(x, a, k, ro){
+      
+      if (mode(c(x, a, k, ro)) != "numeric") 
+        stop("non-numeric argument to mathematical function")
+      if (any(c(a, k, ro) <= 0)) 
+        stop("a, k and rho must be greater than 0")
+      
+      lpmf <- lgamma(a + ro) + lgamma(k + ro) + lgamma(a + x) + lgamma(k + x) - lgamma(ro) - 
+        lgamma(a) - lgamma(k) - lgamma(a + k + ro + x) - lgamma(x + 1)
+      pmf <- exp(lpmf)
+      return(pmf)
+      
+    }
+    
     mu <- object$fitted.values
     k <- object$betaIIpars[1]
     ro <- object$betaIIpars[2]
@@ -34,7 +85,7 @@ residuals.gw <- function (object, type = c("pearson", "response", "quantile"), r
       B <- pgw(y, a, k, ro)
       u <- stats::runif(length(y), A, B)
       qr <- stats::qnorm(u)
-      return(qr)
+      return(sort(qr))
     }
   }
     
@@ -57,10 +108,10 @@ residuals.gw <- function (object, type = c("pearson", "response", "quantile"), r
                               .multicombine = TRUE, .inorder = FALSE, .packages = c("GWRM"), 
                               .verbose = as.logical(trace)) %dopar% {
                                 converged <- FALSE
-                                varResponse <- getResponse(object$formula)
+                                varResponse <- GWRM:::getResponse(object$formula)
                                 datos <- object$data[rep(1:nrow(object$data), 
                                                          object$W), ]
-                                datos[varResponse] <- as.matrix(rgw(n, a, k, 
+                                datos[varResponse] <- as.matrix(GWRM::rgw(n, a, k, 
                                                                     ro))
                                 while (!converged) {
                                   fit <- try(GWRM::gw(object$formula, data = datos, 
@@ -68,7 +119,7 @@ residuals.gw <- function (object, type = c("pearson", "response", "quantile"), r
                                   if (fit$aic > 0 && fit$betaIIpars[2] > 2) 
                                     converged <- TRUE
                                   else {
-                                    datos[varResponse] <- as.matrix(rgw(n, a, 
+                                    datos[varResponse] <- as.matrix(GWRM::rgw(n, a, 
                                                                         k, ro))
                                   }
                                 }
@@ -81,10 +132,10 @@ residuals.gw <- function (object, type = c("pearson", "response", "quantile"), r
                               .multicombine = TRUE, .inorder = FALSE, .packages = c("GWRM"), 
                               .verbose = as.logical(trace)) %do% {
                                 converged <- FALSE
-                                varResponse <- getResponse(object$formula)
+                                varResponse <- GWRM:::getResponse(object$formula)
                                 datos <- object$data[rep(1:nrow(object$data), 
                                                          object$W), ]
-                                datos[varResponse] <- as.matrix(rgw(n, a, k, 
+                                datos[varResponse] <- as.matrix(GWRM::rgw(n, a, k, 
                                                                     ro))
                                 while (!converged) {
                                   fit <- try(GWRM::gw(object$formula, data = datos, 
@@ -92,7 +143,7 @@ residuals.gw <- function (object, type = c("pearson", "response", "quantile"), r
                                   if (fit$aic > 0 && fit$betaIIpars[2] > 2) 
                                     converged <- TRUE
                                   else {
-                                    datos[varResponse] <- as.matrix(rgw(n, a, 
+                                    datos[varResponse] <- as.matrix(GWRM::rgw(n, a, 
                                                                         k, ro))
                                   }
                                 }

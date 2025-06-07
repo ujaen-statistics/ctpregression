@@ -4,13 +4,13 @@
 #The nloptr function from the nloptr library is used.
 #--------------------------------------------------
 
-ctp.fit <- function(formula,w=NULL,astart=NULL,bstart=NULL,betastart=NULL,iters=10000,data){
+library(hypergeo)
+library(gsl)
+library(nloptr)
+library(pracma)
+library(cpd)
 
-  library(hypergeo)
-  library(gsl)
-  library(nloptr)
-  library(pracma)
-  library(cpd)
+ctp.fit <- function(formula,w=NULL,astart=NULL,bstart=NULL,betastart=NULL,iters=10000,data){
 
   #Design matrix
 
@@ -151,7 +151,9 @@ ctp.fit <- function(formula,w=NULL,astart=NULL,bstart=NULL,betastart=NULL,iters=
                   parameters = fit$pars[(ncovars.mu + 1):(ncovars.mu + 2)],
                   data = data, 
                   weights = stats::setNames(w, seq(w)),
-                  code = fit$status)
+                  code = fit$status,
+                  terms = terms(formula), 
+                  xlevels = .getXlevels(terms(formula), model.frame(terms(formula), data = data, na.action = NULL)))
 
   mu <- as.vector(offset*exp(matrizmu %*% fit$pars[1:ncovars.mu]))
   results$fitted.values <- mu

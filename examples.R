@@ -2,7 +2,7 @@
 # EXAMPLES
 # ------------------
 
-setwd("C:/Users/UJA/Mi unidad/Investigacion/RegresionCTP/RegresionCTPc/STATISTICA/Scripts")
+setwd(".../Scripts")
 
 source("ctp.fit.R")
 source("summary_ctp.R")
@@ -10,6 +10,8 @@ source("plots.R")
 source("residuals.R")
 source("expected.R")
 source("utils.R")
+source("predict_ctp.R")
+source("residuals_gw.R")
 
 library(GWRM)
 library(COUNT)
@@ -34,6 +36,8 @@ par(mfrow = c(1,2))
 plot.ctp(ctp.ger2)
 
 par(mfrow=c(1,1))
+residuals.ctp(ctp.ger2, type = "quantile", envelope = TRUE)
+
 expec_ctp2<-expected.ctp(ctp.ger2)
 
 #Goodness of fit measures
@@ -45,6 +49,21 @@ pearson(ctp.ger2) # 862.7484
 #number of under-dispersed cases
 sum(ctp.ger2$parameters[1] < (- ctp.ger2$fitted.values - 1) / 2) # 421
 
+#dispersion in terms of covariates
+m <- aggregate(formula, Germany, mean)
+v <- aggregate(formula, Germany, var)
+l <- aggregate(formula, Germany, length)
+estimated.means <- predict.CTP(ctp.ger2, m[,1:5], type ="response")
+dispersion.table <- cbind(m[1:4], estimated.means, m[5], v[,5])
+names(dispersion.table) <- c("Place", "Type", "Result", "Rival", "Expected mean", "Sample mean", "Sample variance")
+dispersion.table <- dispersion.table[order(dispersion.table$`Expected mean`, decreasing = F), ]
+dispersion.table
+
+#Cross-validation CTP model
+Germany2 <- read.csv("Germany2.txt", sep = "")
+y.est <- predict.CTP(ctp.ger2, newdata = Germany2, type = "response")
+sum((Germany2$Scored - y.est) ^ 2 ) / 25
+#[1] 1.899919
 
 #Poisson regression ----------------------------------------
 pois.ger <- glm(formula, data = Germany, family = "poisson")
@@ -125,7 +144,10 @@ par(mfrow = c(1,2))
 plot(hp.ger2)
 
 par(mfrow = c(1,1))
+residuals(hp.ger2, type = "quantile", envelope = TRUE)
+
 expec_hp2 <- hP_expected(hp.ger2)
+
 barplot(expec_hp2$observed_freq, xlab = "Y", ylab = "Frequencies")
 lines(expec_hp2$frequencies, x = c(1:18), col = "blue")
 legend("topright", legend = c(paste("Dif = ", round(expec_hp2$dif, 3)), paste(expression(chi ^ 2), "=", round(37.75822, 3))))
@@ -226,8 +248,13 @@ sum(residuals(md_gw)^2)
 source("plot.glm_gw.R")
 source("residuals_gw.R")
 source("dgw.R")
+source("pgw.R")
 par(mfrow = c(1,2))
 plot.gw(md_gw)
+
+
+par(mfrow = c(1,1))
+residuals.gw(md_gw, type = "quantile", envelope = TRUE)
 
 source("expected_gw.R")
 par(mfrow = c(1,1))
@@ -252,6 +279,8 @@ par(mfrow = c(1,2))
 plot.ctp(md_ctp)
 
 par(mfrow = c(1,1))
+residuals.ctp(md_ctp, type = "quantile", envelope = TRUE)
+
 expec_ctp <- expected.ctp(md_ctp)
 
 #Goodness of fit measures
@@ -261,7 +290,7 @@ MSPE(md_ctp) # 15.87876
 pearson(md_ctp) # 2052.401
 
 
-#Figure 4 in paper
+#Figure 6 in paper
 freq_agr <- matrix(c(expec_ctp$observed_freq[1:22], expec_ctp$frequencies[1:22], expec_gw$frequencies[1:22]), byrow = T, nrow = 3)
 colnames(freq_agr) <- 0:21
 rownames(freq_agr) <- c("Observed", "CTP expected", "GW expected")
@@ -269,6 +298,38 @@ color.names <- c("black","grey50","white")
 barplot(freq_agr,beside = T, xlab = "Y", ylab = "Frequencies", col = color.names)
 legend("topright",rownames(freq_agr), cex = 0.9, fill = color.names, bty = "n")
 
+#Leave-one-out cross-validation for CTP model
+library(doParallel)
+registerDoParallel(cores=8)
+
+s <- nrow(mdvis)
+y_jack <- c()
+
+LOOCV.mdvis <- function(k){
+  datak <- mdvis[-k,]
+  library(hypergeo)
+  library(gsl)
+  library(nloptr)
+  library(pracma)
+  library(cpd)
+  md_ctp.fit <- ctp.fit(numvisit ~ reform + factor(educ) + factor(agegrp), data = datak, astart = 2.5, bstart = 0.5)
+  y_jack <- predict.CTP(md_ctp.fit, newdata = mdvis, type = "response")[k, 1]
+  list(ajuste = md_ctp.fit, y.jack = y_jack)
+}
+
+md_ctp.LOOCV <- foreach(i=1:s) %dopar% {
+  LOOCV.mdvis(i) 
+}
+
+md_ctp.LOOCV
+
+yjack <- c()
+for (i in 1:2227){
+  yjack[i] <- md_ctp.LOOCV[[i]]$y.jack
+}
+
+sum((mdvis$numvisit-yjack)^2)/s
+#[1] 15.96577
 
 
 #hP regression --------------------------------------------------------------------------------------
