@@ -5,7 +5,6 @@
 #--------------------------------------------------
 
 library(hypergeo)
-library(gsl)
 library(nloptr)
 library(pracma)
 library(cpd)
